@@ -14,6 +14,7 @@ IMAGES_PATH = 'images/'
 
 FULL_TRACEABLE_IMAGE_NAME = 'full_traceable_image.png'
 FULL_TARGET_IMAGE_NAME = 'full_target_image.png'
+FULL_BOILERPLATE_IMAGE_NAME = 'full_boilerplate_image.png'
 
 LENGTH_OF_PAGE_IN_PIXELS = 3300
 WIDTH_OF_PAGE_IN_PIXELS = 2550
@@ -21,30 +22,28 @@ INCREMENT = 200
 
   ### <pic_id>_<complexity>.png
 
-def generate_trace_images(num_pics_per_page, difficulty_level):
+def generate_full_boilerplate_and_target_images(num_pics_per_page, difficulty_level, space_on_page, percentage_to_cut):
     assert(num_pics_per_page in [1, 4, 9, 16])
     image_names = get_n_rand_pics_of_difficulty(num_pics_per_page, difficulty_level)
-    full_traceable_image, full_target_image = get_both_full_images(image_names, num_pics_per_page)
-    full_traceable_image.save(FULL_IMG_PATH + FULL_TRACEABLE_IMAGE_NAME)
+    full_boilerplate_image, full_target_image = get_full_boilerplate_and_target_images(image_names, num_pics_per_page, space_on_page, percentage_to_cut)
+    full_boilerplate_image.save(FULL_IMG_PATH + FULL_BOILERPLATE_IMAGE_NAME)
     full_target_image.save(FULL_IMG_PATH + FULL_TARGET_IMAGE_NAME)
 
-def get_full_images(image_names, num_pics_per_page):
+def get_full_boilerplate_and_target_images(image_names, num_pics_per_page, space_on_page, percentage_to_cut):
+    images = read_images(image_names)
+    full_target_image = create_full_image(images, space_on_page)
+    full_boilerplate_image = create_boilerplate_full_image(images, space_on_page, percentage_to_cut)
+    return full_boilerplate_image, full_target_image
 
-    images = map(Image.open, image_names)
-    widths, heights = zip(*(i.size for i in images))
+def read_images(image_names):
+    images = []
+    for image_name in image_names:
+        img = cv2.imread(image_name, cv2.IMREAD_GRAYSCALE)
+        images.append(img)
+    return images
 
-    total_width = sum(widths)
-    max_height = max(heights)
-
-    new_im = Image.new('RGB', (total_width, max_height))
-
-    x_offset = 0
-    for im in images:
-    new_im.paste(im, (x_offset,0))
-    x_offset += im.size[0]
-
-    new_im.save('test.jpg')
-
+def create_boilerplate_full_image(images, space_on_page, percentage_to_cut):
+    return full_boilerplate_image
 ###############################################################
 
 def generate_just_traceable(num_pics_per_page, difficulty_level, space_on_page): # space_on_page = 'minimal', 'moderate', 'maximal'
@@ -99,21 +98,13 @@ def create_full_image(images, space_on_page):
     for x in range(images_per_side):
         for y in range(images_per_side):
             img = images.pop()
-            x_offset = x * img.shape[1]
-            y_offset = y * img.shape[0]
-            target_image_grid[y_offset:y_offset + img.shape[0], x_offset:x_offset + img.shape[1]] = img
-
-
-    
+            img = cv2.resize(img, (single_image_len, single_image_len)) 
+            x_offset = x * single_image_len
+            y_offset = y * single_image_len
+            target_image_grid[y_offset:y_offset + single_image_len, x_offset:x_offset + single_image_len] = img
 
     full_image = np.ones((LENGTH_OF_PAGE_IN_PIXELS, WIDTH_OF_PAGE_IN_PIXELS, 3), np.uint8)
     x_offset = int((WIDTH_OF_PAGE_IN_PIXELS - image_frame_size) / 2)
     y_offset = int((LENGTH_OF_PAGE_IN_PIXELS - image_frame_size) / 2)
     full_image[y_offset:y_offset + target_image_grid.shape[0], x_offset:x_offset + target_image_grid.shape[1]] = target_image_grid
-
     return full_image
-
-def add_border_to_image(image_name, border_size=2):
-    img = Image.open(image_name)
-    img_with_border = ImageOps.expand(img, border=border_size, fill='black')
-    img_with_border.save(image_name) # replaces original image
