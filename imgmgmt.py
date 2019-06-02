@@ -19,6 +19,7 @@ FULL_BOILERPLATE_IMAGE_NAME = 'full_boilerplate_image.png'
 LENGTH_OF_PAGE_IN_PIXELS = 3300
 WIDTH_OF_PAGE_IN_PIXELS = 2550
 INCREMENT = 200
+BLACK = [0, 0, 0]
 
   ### <pic_id>_<complexity>.png
 
@@ -31,7 +32,7 @@ def generate_full_boilerplate_and_target_images(num_pics_per_page, difficulty_le
 
 def get_full_boilerplate_and_target_images(image_names, num_pics_per_page, space_on_page, percentage_to_cut):
     images = read_images(image_names)
-    full_target_image = create_full_image(images, space_on_page)
+    full_target_image = generate_full_regular_image(images, space_on_page)
     full_boilerplate_image = create_boilerplate_full_image(images, space_on_page, percentage_to_cut)
     return full_boilerplate_image, full_target_image
 
@@ -42,8 +43,51 @@ def read_images(image_names):
         images.append(img)
     return images
 
+def generate_full_regular_image(images, space_on_page):
+    bordered_images = []
+    for image in images:
+        with_border = cv2.copyMakeBorder(image, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=BLACK)
+        bordered_images.append(with_border)
+    return create_full_image(bordered_images, space_on_page)
+
 def create_boilerplate_full_image(images, space_on_page, percentage_to_cut):
-    return full_boilerplate_image
+    bordered_cut_images = []
+    for image in images:
+        cut_img = cut_n_percent_of_image(image, percentage_to_cut)
+        with_border = cv2.copyMakeBorder(cut_img, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=BLACK)
+        bordered_cut_images.append(with_border)
+    return create_full_image(bordered_cut_images, space_on_page)
+
+def cut_n_percent_of_image(image, percentage_to_cut):
+    where_to_cut = random.randint(0, 3)
+    y_offset = None
+    x_offset = None
+    image_cover = None
+    if where_to_cut == 0: # cut the left chunk
+        new_x = int((image.shape[1] * percentage_to_cut) / 100)
+        image_cover = np.ones((image.shape[0], new_x, 3), np.uint8)
+        y_offset = 0
+        x_offset = 0
+    elif where_to_cut == 1: # cut the top chunk
+        new_y = int((image.shape[0] * percentage_to_cut) / 100)
+        image_cover = np.ones((new_y, image.shape[1], 3), np.uint8)
+        y_offset = 0
+        x_offset = 0
+    elif where_to_cut == 2: # cut the right chunk
+        new_x = int((image.shape[1] * percentage_to_cut) / 100)
+        image_cover = np.ones((image.shape[0], new_x, 3), np.uint8)
+        y_offset = 0
+        x_offset = image.shape[1] - new_x
+    else:                   # cut the bottom chunk
+        new_y = int((image.shape[0] * percentage_to_cut) / 100)
+        image_cover = np.ones((new_y, image.shape[1], 3), np.uint8)
+        y_offset = image.shape[0] - new_y
+        x_offset = 0
+
+    image[y_offset:y_offset + image.shape[0], x_offset:x_offset + image.shape[1]] = image_cover
+    return image
+
+
 ###############################################################
 
 def generate_just_traceable(num_pics_per_page, difficulty_level, space_on_page): # space_on_page = 'minimal', 'moderate', 'maximal'
@@ -61,7 +105,7 @@ def get_n_rand_pics_of_difficulty(n, difficulty_level):
         if int(complexity) == difficulty_level:
             image_names_of_proper_difficulty.append(image_name)
     random.shuffle(image_names_of_proper_difficulty)
-    return image_names_of_proper_difficulty[0:num_pics_per_page]
+    return image_names_of_proper_difficulty[0:n]
 
 def get_all_image_names():
     os.chdir(IMAGES_PATH)
@@ -81,7 +125,6 @@ def get_full_traceable_image(image_names, num_pics_per_page, space_on_page):
 def erode_and_border(cv2_image):
     kernel = np.ones((2,2), np.uint8) 
     img_erosion = cv2.erode(cv2_image, kernel, iterations=1)
-    BLACK = [0, 0, 0]
     with_border = cv2.copyMakeBorder(img_erosion, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=BLACK)
     return with_border
 
