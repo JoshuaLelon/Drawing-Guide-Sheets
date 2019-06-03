@@ -66,22 +66,22 @@ def cut_n_percent_of_image(image, percentage_to_cut):
     image_cover = None
     if where_to_cut == 0: # cut the left chunk
         new_x = int((image.shape[1] * percentage_to_cut) / 100)
-        image_cover = np.zeros((image.shape[0], new_x, 3), np.uint8)
+        image_cover = create_pure_white_img(image.shape[0], new_x)
         y_offset = 0
         x_offset = 0
     elif where_to_cut == 1: # cut the top chunk
         new_y = int((image.shape[0] * percentage_to_cut) / 100)
-        image_cover = np.zeros((new_y, image.shape[1], 3), np.uint8)
+        image_cover = create_pure_white_img(new_y, image.shape[1])
         y_offset = 0
         x_offset = 0
     elif where_to_cut == 2: # cut the right chunk
         new_x = int((image.shape[1] * percentage_to_cut) / 100)
-        image_cover = np.zeros((image.shape[0], new_x, 3), np.uint8)
+        image_cover = create_pure_white_img(image.shape[0], new_x)
         y_offset = 0
         x_offset = image.shape[1] - new_x
     else:                   # cut the bottom chunk
         new_y = int((image.shape[0] * percentage_to_cut) / 100)
-        image_cover = np.zeros((new_y, image.shape[1], 3), np.uint8)
+        image_cover = create_pure_white_img(new_y, image.shape[1])
         y_offset = image.shape[0] - new_y
         x_offset = 0
     # print("image shape: ", image.shape)
@@ -91,6 +91,8 @@ def cut_n_percent_of_image(image, percentage_to_cut):
     image[y_offset:y_offset + image_cover.shape[0], x_offset:x_offset + image_cover.shape[1]] = image_cover
     return image
 
+def create_pure_white_img(y, x):
+    return np.ones((y, x, 3), np.uint8) * 255
 
 ###############################################################
 
@@ -152,7 +154,7 @@ def create_full_image(images, space_on_page):
             y_offset = y * single_image_len
             target_image_grid[y_offset:y_offset + single_image_len, x_offset:x_offset + single_image_len] = img
 
-    full_image = np.zeros((LENGTH_OF_PAGE_IN_PIXELS, WIDTH_OF_PAGE_IN_PIXELS, 3), np.uint8)
+    full_image = create_pure_white_img(LENGTH_OF_PAGE_IN_PIXELS, WIDTH_OF_PAGE_IN_PIXELS)
     x_offset = int((WIDTH_OF_PAGE_IN_PIXELS - image_frame_size) / 2)
     y_offset = int((LENGTH_OF_PAGE_IN_PIXELS - image_frame_size) / 2)
     full_image[y_offset:y_offset + target_image_grid.shape[0], x_offset:x_offset + target_image_grid.shape[1]] = target_image_grid
