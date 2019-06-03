@@ -9,8 +9,8 @@ import numpy as np
 
 ##########  
 
-FULL_IMG_PATH = 'full/'
-IMAGES_PATH = 'images/'
+FULL_IMG_PATH = os.path.dirname(os.path.abspath(__file__)) + '/full/'
+IMAGES_PATH = os.path.dirname(os.path.abspath(__file__)) + '/images/'
 
 FULL_TRACEABLE_IMAGE_NAME = 'full_traceable_image.png'
 FULL_TARGET_IMAGE_NAME = 'full_target_image.png'
@@ -27,8 +27,9 @@ def generate_full_boilerplate_and_target_images(num_pics_per_page, difficulty_le
     assert(num_pics_per_page in [1, 4, 9, 16])
     image_names = get_n_rand_pics_of_difficulty(num_pics_per_page, difficulty_level)
     full_boilerplate_image, full_target_image = get_full_boilerplate_and_target_images(image_names, num_pics_per_page, space_on_page, percentage_to_cut)
-    full_boilerplate_image.save(FULL_IMG_PATH + FULL_BOILERPLATE_IMAGE_NAME)
-    full_target_image.save(FULL_IMG_PATH + FULL_TARGET_IMAGE_NAME)
+    print(FULL_IMG_PATH + FULL_BOILERPLATE_IMAGE_NAME)
+    cv2.imwrite(FULL_IMG_PATH + FULL_BOILERPLATE_IMAGE_NAME, full_boilerplate_image)
+    cv2.imwrite(FULL_IMG_PATH + FULL_TARGET_IMAGE_NAME, full_target_image)
 
 def get_full_boilerplate_and_target_images(image_names, num_pics_per_page, space_on_page, percentage_to_cut):
     images = read_images(image_names)
@@ -39,7 +40,7 @@ def get_full_boilerplate_and_target_images(image_names, num_pics_per_page, space
 def read_images(image_names):
     images = []
     for image_name in image_names:
-        img = cv2.imread(image_name, cv2.IMREAD_GRAYSCALE)
+        img = cv2.imread(image_name)
         images.append(img)
     return images
 
@@ -65,26 +66,29 @@ def cut_n_percent_of_image(image, percentage_to_cut):
     image_cover = None
     if where_to_cut == 0: # cut the left chunk
         new_x = int((image.shape[1] * percentage_to_cut) / 100)
-        image_cover = np.ones((image.shape[0], new_x, 3), np.uint8)
+        image_cover = np.zeros((image.shape[0], new_x, 3), np.uint8)
         y_offset = 0
         x_offset = 0
     elif where_to_cut == 1: # cut the top chunk
         new_y = int((image.shape[0] * percentage_to_cut) / 100)
-        image_cover = np.ones((new_y, image.shape[1], 3), np.uint8)
+        image_cover = np.zeros((new_y, image.shape[1], 3), np.uint8)
         y_offset = 0
         x_offset = 0
     elif where_to_cut == 2: # cut the right chunk
         new_x = int((image.shape[1] * percentage_to_cut) / 100)
-        image_cover = np.ones((image.shape[0], new_x, 3), np.uint8)
+        image_cover = np.zeros((image.shape[0], new_x, 3), np.uint8)
         y_offset = 0
         x_offset = image.shape[1] - new_x
     else:                   # cut the bottom chunk
         new_y = int((image.shape[0] * percentage_to_cut) / 100)
-        image_cover = np.ones((new_y, image.shape[1], 3), np.uint8)
+        image_cover = np.zeros((new_y, image.shape[1], 3), np.uint8)
         y_offset = image.shape[0] - new_y
         x_offset = 0
-
-    image[y_offset:y_offset + image.shape[0], x_offset:x_offset + image.shape[1]] = image_cover
+    # print("image shape: ", image.shape)
+    # print("image_cover shape: ", image_cover.shape)
+    # print("y_offset: ", y_offset)
+    # print("x_offset: ", x_offset)
+    image[y_offset:y_offset + image_cover.shape[0], x_offset:x_offset + image_cover.shape[1]] = image_cover
     return image
 
 
@@ -94,7 +98,7 @@ def generate_just_traceable(num_pics_per_page, difficulty_level, space_on_page):
     assert(num_pics_per_page in [1, 4, 9, 16])
     image_names = get_n_rand_pics_of_difficulty(num_pics_per_page, difficulty_level)
     full_traceable_image = get_full_traceable_image(image_names, num_pics_per_page, space_on_page)
-    full_traceable_image.save(FULL_IMG_PATH + FULL_TRACEABLE_IMAGE_NAME)
+    cv2.imwrite(FULL_IMG_PATH + FULL_TRACEABLE_IMAGE_NAME, full_traceable_image)
 
 def get_n_rand_pics_of_difficulty(n, difficulty_level):
     image_names_list = get_all_image_names()
@@ -105,6 +109,8 @@ def get_n_rand_pics_of_difficulty(n, difficulty_level):
         if int(complexity) == difficulty_level:
             image_names_of_proper_difficulty.append(image_name)
     random.shuffle(image_names_of_proper_difficulty)
+    print("Picked images: ")
+    print(image_names_of_proper_difficulty[0:n])
     return image_names_of_proper_difficulty[0:n]
 
 def get_all_image_names():
@@ -123,7 +129,7 @@ def get_full_traceable_image(image_names, num_pics_per_page, space_on_page):
     return create_full_image(bordered_eroded_images, space_on_page)
     
 def erode_and_border(cv2_image):
-    kernel = np.ones((2,2), np.uint8) 
+    kernel = np.zeros((2,2), np.uint8) 
     img_erosion = cv2.erode(cv2_image, kernel, iterations=1)
     with_border = cv2.copyMakeBorder(img_erosion, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=BLACK)
     return with_border
@@ -135,7 +141,7 @@ def create_full_image(images, space_on_page):
     if space_on_page == 'moderate':
         image_frame_size = WIDTH_OF_PAGE_IN_PIXELS - INCREMENT
     
-    images_per_side = math.sqrt(len(images))
+    images_per_side = int(math.sqrt(len(images)))
     single_image_len = int(image_frame_size / images_per_side)
     target_image_grid = np.zeros((image_frame_size, image_frame_size, 3), np.uint8)
     for x in range(images_per_side):
@@ -146,8 +152,30 @@ def create_full_image(images, space_on_page):
             y_offset = y * single_image_len
             target_image_grid[y_offset:y_offset + single_image_len, x_offset:x_offset + single_image_len] = img
 
-    full_image = np.ones((LENGTH_OF_PAGE_IN_PIXELS, WIDTH_OF_PAGE_IN_PIXELS, 3), np.uint8)
+    full_image = np.zeros((LENGTH_OF_PAGE_IN_PIXELS, WIDTH_OF_PAGE_IN_PIXELS, 3), np.uint8)
     x_offset = int((WIDTH_OF_PAGE_IN_PIXELS - image_frame_size) / 2)
     y_offset = int((LENGTH_OF_PAGE_IN_PIXELS - image_frame_size) / 2)
     full_image[y_offset:y_offset + target_image_grid.shape[0], x_offset:x_offset + target_image_grid.shape[1]] = target_image_grid
     return full_image
+
+if __name__ == "__main__":
+    if len(sys.argv) == 5:
+        print("Number of pictures per page: ", sys.argv[1])
+        print("Difficulty level: ", sys.argv[2])
+        print("Size of images on page: ", sys.argv[3]) # minimal, moderate, maximal
+        print("Percentage to cut: ", sys.argv[4])
+        print("----")
+        print("Generating boilerplate and target images...")
+        generate_full_boilerplate_and_target_images(int(sys.argv[1]), int(sys.argv[2]), sys.argv[3], int(sys.argv[4]))
+    elif len(sys.argv) == 4:
+        print("Number of pictures per page: ", sys.argv[1])
+        print("Difficulty level: ", sys.argv[2])
+        print("Size of images on page: ", sys.argv[3]) # minimal, moderate, maximal
+        print("----")
+        print("Generating just traceable images...")
+        generate_just_traceable(int(sys.argv[1]), int(sys.argv[2]), sys.argv[3])
+    else:
+        print("----")
+        print("Generating boilerplate and target images with pictures: 9, difficulty: 3, moderate spacing, and 60 percent cut.")
+        generate_full_boilerplate_and_target_images(9, 3, 'moderate', 60)
+    
