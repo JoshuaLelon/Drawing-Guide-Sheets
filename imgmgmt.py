@@ -27,7 +27,6 @@ def generate_full_boilerplate_and_target_images(num_pics_per_page, difficulty_le
     assert(num_pics_per_page in [1, 4, 9, 16])
     image_names = get_n_rand_pics_of_difficulty(num_pics_per_page, difficulty_level)
     full_boilerplate_image, full_target_image = get_full_boilerplate_and_target_images(image_names, num_pics_per_page, space_on_page, percentage_to_cut)
-    print(FULL_IMG_PATH + FULL_BOILERPLATE_IMAGE_NAME)
     cv2.imwrite(FULL_IMG_PATH + FULL_BOILERPLATE_IMAGE_NAME, full_boilerplate_image)
     cv2.imwrite(FULL_IMG_PATH + FULL_TARGET_IMAGE_NAME, full_target_image)
 
@@ -115,6 +114,20 @@ def get_n_rand_pics_of_difficulty(n, difficulty_level):
     print(image_names_of_proper_difficulty[0:n])
     return image_names_of_proper_difficulty[0:n]
 
+def print_difficulty_histogram():
+    image_names_list = get_all_image_names()
+    difficulties = {}
+    for image_name in image_names_list:
+        filename, _ = os.path.splitext(image_name)
+        complexity = int(filename.split("_", 1)[1])
+        if complexity in difficulties:
+            difficulties[complexity] += 1
+        else:
+            difficulties[complexity] = 1
+    print("Difficulty: Number Of Images")
+    for key in sorted(difficulties.keys()):
+        print(key, ": ", difficulties[key])
+
 def get_all_image_names():
     os.chdir(IMAGES_PATH)
     image_names = []
@@ -125,14 +138,17 @@ def get_all_image_names():
 def get_full_traceable_image(image_names, num_pics_per_page, space_on_page):
     bordered_eroded_images = []
     for image_name in image_names:
-        img = cv2.imread(image_name, cv2.IMREAD_GRAYSCALE)
+        img = cv2.imread(image_name)
         prepped_img = erode_and_border(img)
         bordered_eroded_images.append(prepped_img)
     return create_full_image(bordered_eroded_images, space_on_page)
     
 def erode_and_border(cv2_image):
-    kernel = np.zeros((2,2), np.uint8) 
-    img_erosion = cv2.erode(cv2_image, kernel, iterations=1)
+    kernel = 1
+    # img_erosion = cv2.erode(cv2_image, kernel, iterations=1000)
+    img_erosion = cv2.blur(cv2_image, (kernel, kernel))
+    for i in range(25):
+        img_erosion = cv2.blur(img_erosion, (kernel, kernel))
     with_border = cv2.copyMakeBorder(img_erosion, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=BLACK)
     return with_border
 
@@ -179,5 +195,6 @@ if __name__ == "__main__":
     else:
         print("----")
         print("Generating boilerplate and target images with pictures: 9, difficulty: 3, moderate spacing, and 60 percent cut.")
-        generate_full_boilerplate_and_target_images(9, 3, 'moderate', 60)
+        generate_full_boilerplate_and_target_images(9, 3, 'maximal', 50)
+    print_difficulty_histogram()
     
